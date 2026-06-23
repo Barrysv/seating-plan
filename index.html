@@ -174,6 +174,50 @@
     .layout { grid-template-columns: 1fr; }
   }
 
+  /* ─── Presentation mode ──────────────────────
+     Triggered by clicking Present. Hides the sidebar, header, and footer so the
+     seating canvas can be projected full-screen. A small "Exit" button appears
+     in the corner. Esc also exits (handled in JS). */
+  body.presenting header,
+  body.presenting .panel,
+  body.presenting .about-footer { display: none !important; }
+  body.presenting .layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  body.presenting .wrap {
+    max-width: none;
+    padding: 18px;
+  }
+  body.presenting .canvas-wrap {
+    min-height: calc(100vh - 36px);
+    padding: 26px 32px 28px;
+  }
+  /* Floating Exit button — visible only in presenting mode, sits over the top-right
+     of the canvas. */
+  .exit-present {
+    display: none;
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    z-index: 100;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 8px 14px;
+    border-radius: 3px;
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    opacity: 0.35;
+    transition: opacity .15s ease;
+  }
+  .exit-present:hover { opacity: 1; }
+  body.presenting .exit-present { display: block; }
+
   /* ─── Sidebar / input panel ─────────────────── */
   .panel {
     background: #fbf7ed;
@@ -733,13 +777,14 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 14px 12px 0;
     color: var(--ink-soft);
     font-family: "JetBrains Mono", monospace;
     font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: 0.18em;
   }
+  .front-marker--bottom { margin: 14px 12px 0; }
+  .front-marker--top    { margin: 0 12px 14px; }
   .front-marker .line {
     flex: 1;
     height: 1px;
@@ -749,6 +794,9 @@
     color: var(--accent);
     font-weight: 500;
   }
+  /* By default (teacher view) show the bottom marker only. */
+  .canvas-wrap[data-view="teacher"] .front-marker--top { display: none; }
+  .canvas-wrap[data-view="student"] .front-marker--bottom { display: none; }
 
   /* ─── Toast ─────────────────────────────────── */
   .toast {
@@ -1088,6 +1136,8 @@
       <button class="btn ghost" id="shuffleBtn">Shuffle</button>
       <button class="btn ghost" id="sortBtn">Sort A–Z</button>
       <button class="btn ghost" id="clearBtn">Clear</button>
+      <button class="btn ghost" id="viewToggleBtn" title="Switch between teacher's view (front at bottom) and students' view (front at top, mirrored)">Teacher's view</button>
+      <button class="btn ghost" id="presentBtn" title="Hide menus and maximise the seating plan for projection (Esc to exit)">Full-screen</button>
       <button class="btn ghost" id="settingsBtn" title="Room, aisles, separation rules (Ctrl+Shift+K)">Settings</button>
       <button class="btn" id="saveBtn">Save</button>
       <button class="btn" id="loadBtn">Load</button>
@@ -1166,7 +1216,7 @@
     </aside>
 
     <!-- Canvas -->
-    <section class="canvas-wrap">
+    <section class="canvas-wrap" id="canvasWrap" data-view="teacher">
       <div class="canvas-head">
         <div class="canvas-title">
           <input type="text" class="class-name-input" id="classNameDisplay" value="Untitled class" />
@@ -1177,13 +1227,21 @@
           <div class="room-badge" id="roomBadge" style="display:none;"></div>
         </div>
       </div>
+      <!-- Front-marker shown ABOVE the grid in student view (front of room is at the top
+           when looking from the students' perspective). -->
+      <div class="front-marker front-marker--top" id="frontMarkerTop">
+        <span class="line"></span>
+        <span class="text">Front of room · teacher</span>
+        <span class="line"></span>
+      </div>
       <div class="grid" id="grid">
         <div class="empty-state">
           <div class="big">An empty room. <br>Bring it to life.</div>
           <div class="small">Import the SEQTA PDF · or paste a name list</div>
         </div>
       </div>
-      <div class="front-marker" id="frontMarker">
+      <!-- Front-marker shown BELOW the grid in teacher view (default). -->
+      <div class="front-marker front-marker--bottom" id="frontMarkerBottom">
         <span class="line"></span>
         <span class="text">Front of room · teacher</span>
         <span class="line"></span>
@@ -1201,7 +1259,7 @@
           A simple class seating-plan composer. Imports student names and photos directly from a SEQTA class-roll PDF, generates randomised or alphabetical layouts, supports separation rules between students, exports to PNG, CSV, or print.
         </p>
         <p class="about-credit">
-          Built 03 May 2026 by <strong><a href = "mailto:barry.vayler@cewa.edu.au"> Barry Vayler</a></strong>. Feedback and ideas welcome &mdash; please get in touch! 
+          Built by <strong>Barry Vayler</strong>. Feedback and ideas welcome &mdash; please get in touch.
         </p>
       </div>
     </div>
@@ -1283,6 +1341,8 @@
   </div>
 </div>
 
+<button class="exit-present" id="exitPresentBtn" type="button">Exit (Esc)</button>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -1296,6 +1356,10 @@ let cols = 6;
 // Number of empty rows to render beyond the rows needed for students. Lets the teacher
 // drag into gaps and leave deliberate empty seats. Adjustable in the sidebar.
 let extraRows = 0;
+// 'teacher' = front-of-room at the bottom of the screen (the teacher's perspective looking
+// out at the class). 'student' = full 180° rotation so the diagram matches what a student
+// sees when looking toward the teacher. Used when projecting to the class.
+let viewMode = 'teacher';
 // Aisle positions. Each value N means "draw an aisle AFTER column N" (1-indexed).
 // E.g. for cols=6 with aisles=[3], an aisle splits the room into a left block of 3
 // columns and a right block of 3. Aisles also affect constraint adjacency: students
@@ -1890,18 +1954,21 @@ function render() {
 
   if (!students.length) {
     grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-    grid.innerHTML = '<div class="empty-state"><div class="big">An empty room. <br>Bring it to life.</div><div class="small">Import the SEQTA PDF / or paste a name list</div></div>';
+    grid.innerHTML = '<div class="empty-state"><div class="big">An empty room. <br>Bring it to life.</div><div class="small">Import the SEQTA PDF · or paste a name list</div></div>';
     $('#countLabel').textContent = '0';
     $('#layoutLabel').textContent = '—';
     return;
   }
 
-  // logical col 0..cols-1 → visual grid-column (1-indexed, accounts for aisle columns)
+  // logical col 0..cols-1 → visual grid-column (1-indexed, accounts for aisle columns).
+  // In student view, columns are mirrored: logical col 0 (teacher's left) becomes the
+  // visual rightmost column.
   const visualColForLogical = (c) => {
+    const effC = (viewMode === 'student') ? (cols - 1 - c) : c;
     let visualCol = 1; // grid-column is 1-indexed
-    for (let i = 0; i < c; i++) {
+    for (let i = 0; i < effC; i++) {
       visualCol++;
-      if (validAisles.includes(i + 1)) visualCol++; // aisle column inserted between i and i+1
+      if (validAisles.includes(i + 1)) visualCol++;
     }
     return visualCol;
   };
@@ -1921,8 +1988,11 @@ function render() {
     layout.length = safeLength;
   }
 
-  // Render visually bottom-up: visualRow 0 is the top of the page, but layout row 0
-  // (the "front" of the room, where students are seated first) goes at the bottom.
+  // Render visually:
+  // - Teacher view: layout row 0 (front of room) at the BOTTOM of the screen — what the
+  //   teacher sees when looking at the class.
+  // - Student view: layout row 0 (front of room, where teacher stands) at the TOP of the
+  //   screen — full 180° rotation, also mirroring columns left/right.
   const renderTotalRows = Math.ceil(layout.length / cols);
 
   // Compute which student IDs currently violate a separation rule, so we can flag their
@@ -1941,7 +2011,9 @@ function render() {
 
   // First, place all the student/slot tiles
   for (let visualRow = 0; visualRow < renderTotalRows; visualRow++) {
-    const layoutRow = renderTotalRows - 1 - visualRow;
+    const layoutRow = (viewMode === 'student')
+      ? visualRow                          // front at top
+      : renderTotalRows - 1 - visualRow;   // front at bottom (teacher's perspective)
     for (let c = 0; c < cols; c++) {
       const idx = layoutRow * cols + c;
       const id = layout[idx];
@@ -1986,16 +2058,13 @@ function render() {
     }
   }
 
-  // Then add the aisle column elements (one tall element per aisle, spanning all rows)
+  // Then add the aisle column elements (one tall element per aisle, spanning all rows).
+  // In teacher view, the aisle sits immediately to the LEFT of logical col `a`.
+  // In student view (mirrored), it sits immediately to the RIGHT.
   for (const a of validAisles) {
-    let visualCol = 2; // start counting from after col 1
-    for (let i = 0; i < a; i++) {
-      visualCol++;
-      if (validAisles.includes(i + 1) && i + 1 < a) visualCol++;
-    }
-    // Actually, simpler: visualColForLogical(a) gives the grid-column of the cell at
-    // logical col 'a'; the aisle sits at visualColForLogical(a) - 1.
-    const aisleCol = visualColForLogical(a) - 1;
+    const aisleCol = (viewMode === 'student')
+      ? visualColForLogical(a) + 1
+      : visualColForLogical(a) - 1;
     const aisleEl = document.createElement('div');
     aisleEl.className = 'aisle';
     aisleEl.style.gridColumn = String(aisleCol);
@@ -2602,6 +2671,59 @@ $('#shuffleBtn').addEventListener('click', () => {
   layout = constrainedShuffle(layout.filter(x => x !== null));
   render();
 });
+
+// ─── View toggle: teacher ⇄ student ───────────
+// Flips the seating canvas 180° so it matches the perspective of whoever is reading it.
+// Affects on-screen rendering only — PNG export keeps the canonical teacher view.
+function updateViewToggleLabel() {
+  // Button shows the perspective the NEXT click will switch TO.
+  const btn = $('#viewToggleBtn');
+  if (!btn) return;
+  btn.textContent = (viewMode === 'teacher') ? "Student's view" : "Teacher's view";
+}
+function setViewMode(mode) {
+  viewMode = mode;
+  const wrap = $('#canvasWrap');
+  if (wrap) wrap.dataset.view = mode;
+  updateViewToggleLabel();
+  render();
+}
+$('#viewToggleBtn').addEventListener('click', () => {
+  setViewMode(viewMode === 'teacher' ? 'student' : 'teacher');
+  toast(viewMode === 'student' ? "Student's view — for projecting" : "Teacher's view");
+});
+
+// ─── Present mode: hide sidebar/header, optionally browser fullscreen ───
+function enterPresentMode() {
+  document.body.classList.add('presenting');
+  // Try to also enter native browser fullscreen — falls back gracefully if blocked.
+  const docEl = document.documentElement;
+  if (docEl.requestFullscreen) {
+    docEl.requestFullscreen().catch(() => { /* user blocked it; sidebar-hide alone is fine */ });
+  }
+}
+function exitPresentMode() {
+  document.body.classList.remove('presenting');
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+$('#presentBtn').addEventListener('click', enterPresentMode);
+$('#exitPresentBtn').addEventListener('click', exitPresentMode);
+// Esc key exits presentation mode (in addition to whatever exits fullscreen natively)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('presenting')) {
+    exitPresentMode();
+  }
+});
+// Sync our class with the browser's fullscreen state — if the user presses Esc or F11,
+// keep our internal state consistent.
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('presenting')) {
+    // Browser exited fullscreen (likely Esc) — drop the sidebar-hide too for consistency.
+    document.body.classList.remove('presenting');
+  }
+});
 $('#sortBtn').addEventListener('click', () => {
   if (!students.length) { toast('No students yet'); return; }
   // Apply the direction shown on the button, then advance so the label always shows
@@ -2624,7 +2746,7 @@ $('#clearBtn').addEventListener('click', () => {
   $('#roomBadge').style.display = 'none';
   $('#classNameDisplay').value = 'Untitled class';
   updateSortButtonLabel();
-  render();
+  setViewMode('teacher');
   toast('Cleared');
 });
 $('#colsInput').addEventListener('change', e => {
@@ -2881,6 +3003,7 @@ $('#dateDisplay').textContent = new Date().toLocaleDateString('en-AU', { year:'n
 
 // initial render
 updateSortButtonLabel();
+updateViewToggleLabel();
 render();
 </script>
 </body>
