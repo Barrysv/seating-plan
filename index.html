@@ -350,6 +350,39 @@
   .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .row .btn { flex: 1; min-width: 0; }
 
+  /* ─── Optional CSV-fix section ─────────────── */
+  .csv-fix-section {
+    margin-top: 14px;
+    border-top: 1px dashed var(--rule);
+    padding-top: 14px;
+  }
+  .csv-fix-section summary {
+    cursor: pointer;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    list-style: none;
+    padding: 4px 0;
+    user-select: none;
+  }
+  .csv-fix-section summary::-webkit-details-marker { display: none; }
+  .csv-fix-section summary:hover { color: var(--ink); }
+  .csv-fix-section .csv-fix-hint {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .csv-fix-section[open] summary { color: var(--ink); margin-bottom: 8px; }
+  .csv-fix-body { padding-left: 2px; }
+  .file-drop--small {
+    padding: 18px 14px;
+    border-style: dashed;
+    border-width: 1px;
+  }
+  .file-drop--small p { font-size: 12px; }
+  .file-drop--small p strong { font-size: 13px; }
+
   .meta {
     margin-top: 18px;
     padding-top: 16px;
@@ -1123,6 +1156,87 @@
     border-radius: 2px;
     font-size: 11.5px;
   }
+
+  /* ─── Ligature repairs list ─────────────────── */
+  .ligature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .ligature-list:empty { display: none; }
+  .ligature-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    background: #fefbf3;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .ligature-row .bad {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .ligature-row .good {
+    font-family: "Fraunces", serif;
+    color: var(--ink);
+    font-weight: 500;
+    flex: 1;
+  }
+  .ligature-row .arrow {
+    color: var(--ink-soft);
+    font-family: "JetBrains Mono", monospace;
+  }
+  .ligature-row .source-tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .ligature-row .remove-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    padding: 2px 8px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+    line-height: 1.3;
+  }
+  .ligature-row .remove-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ligature-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .ligature-add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 10px;
+    border: 1px solid var(--rule);
+    background: #fefbf3;
+    font-family: "Inter", sans-serif;
+    font-size: 13px;
+    border-radius: 3px;
+  }
+  .ligature-add-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .ligature-arrow {
+    color: var(--ink-soft);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 14px;
+  }
 </style>
 </head>
 <body>
@@ -1184,6 +1298,24 @@
           <input type="file" id="pdfInput" accept=".pdf,application/pdf" style="display:none;">
         </label>
         <p id="pdfStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
+
+        <!-- Optional CSV: fixes any names broken by PDF ligature extraction -->
+        <details class="csv-fix-section" id="csvFixSection">
+          <summary>Names look wrong? <span class="csv-fix-hint">Fix from SEQTA CSV →</span></summary>
+          <div class="csv-fix-body">
+            <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 10px;line-height:1.5;">
+              Export the class roll as CSV from SEQTA and drop it here. The tool will match
+              students by surname and replace any incorrectly-extracted names with the
+              canonical spellings.
+            </p>
+            <label class="file-drop file-drop--small" id="csvFixDrop">
+              <p><strong>Click or drop the SEQTA CSV</strong></p>
+              <p style="font-size:10px;margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);">tab or comma separated</p>
+              <input type="file" id="csvFixInput" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" style="display:none;">
+            </label>
+            <p id="csvFixStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
+          </div>
+        </details>
       </div>
 
       <div class="row">
@@ -1292,6 +1424,25 @@
       <button class="btn ghost" id="addGroupBtn" style="margin-top:10px;">+ Add separation group</button>
     </div>
 
+    <!-- Ligature repairs — for fixing names broken by PDF ligature extraction issues -->
+    <div class="settings-section">
+      <div class="settings-label">Ligature repairs</div>
+      <div class="settings-help" style="margin-bottom:10px;">
+        Fix names that come out wrong when imported from SEQTA PDFs. The PDF font sometimes
+        loses letters in ligatures like <code>ti</code>, <code>ft</code>, <code>ck</code>. If
+        you spot a broken name in an import, add the bad spelling and what it should be.
+        Saved in your browser for next time.
+      </div>
+      <div class="ligature-list" id="ligatureList"></div>
+      <div class="ligature-add-row">
+        <input type="text" id="ligBadInput" placeholder="Broken (e.g. Muen)" autocomplete="off">
+        <span class="ligature-arrow">→</span>
+        <input type="text" id="ligGoodInput" placeholder="Correct (e.g. Mutien)" autocomplete="off">
+        <button class="btn ghost" id="ligAddBtn">Add</button>
+      </div>
+      <div id="ligatureDiagnostic" class="settings-help" style="margin-top:8px;"></div>
+    </div>
+
     <div class="modal-actions">
       <div class="left">
         <span class="feasibility" id="liveStatus"></span>
@@ -1392,17 +1543,42 @@ function uid() { return Math.random().toString(36).slice(2, 9); }
 // private-use codepoints in the range \uE000–\uF8FF. Different SEQTA exports (different
 // classes, different terms) sometimes use different private-use codepoints for the same
 // letter pair, so we collect any we don't recognise into a diagnostic set.
-const KNOWN_PUA_LIGATURES = {
+const BUILT_IN_PUA_LIGATURES = {
   '\uE000': 'ft', '\uE001': 'tt', '\uE002': 'ti', '\uE003': 'fi',
   '\uE004': 'ff', '\uE005': 'fl',
 };
-// Words that have been seen broken by unknown private-use codepoints. The map covers
-// only what's actually been observed; add more lines as new exports surface.
-const KNOWN_BROKEN_WORDS = [
-  // [pattern in extracted text (ignoring PUA chars), replacement]
-  [/\bMu[\uE000-\uF8FF]?en\b/gu, 'Mutien'],
-  [/\bMuen\b/g, 'Mutien'],     // covers the case where the PUA codepoint was lost entirely
+// Default broken-word repairs (catches cases where the ligature codepoint went missing
+// entirely during PDF extraction). Users can extend this list via Settings → Ligature repairs.
+const BUILT_IN_BROKEN_WORDS = [
+  ['Muen', 'Mutien'],
 ];
+
+// User-editable additions (persisted in localStorage). Loaded once at startup; saved
+// whenever Settings UI updates them.
+let userPuaLigatures = {};   // { 'E007': 'ck', ... }   — keys are 4-char hex, no '\u' prefix
+let userBrokenWords = [];    // [['Maillop', 'MacKillop'], ...]
+
+function loadUserLigatureRules() {
+  try {
+    const raw = localStorage.getItem('seating-plan:ligature-rules');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data === 'object') {
+      if (data.pua && typeof data.pua === 'object') userPuaLigatures = data.pua;
+      if (Array.isArray(data.brokenWords)) userBrokenWords = data.brokenWords.filter(Array.isArray);
+    }
+  } catch { /* localStorage might be unavailable; not fatal */ }
+}
+function saveUserLigatureRules() {
+  try {
+    localStorage.setItem('seating-plan:ligature-rules', JSON.stringify({
+      pua: userPuaLigatures,
+      brokenWords: userBrokenWords,
+    }));
+  } catch { /* may be blocked; not fatal */ }
+}
+loadUserLigatureRules();
+
 const unknownPUACodepoints = new Set();
 
 function repairLigatures(s) {
@@ -1411,20 +1587,30 @@ function repairLigatures(s) {
     // Standard Unicode ligatures
     .replace(/\uFB00/g, 'ff').replace(/\uFB01/g, 'fi').replace(/\uFB02/g, 'fl')
     .replace(/\uFB03/g, 'ffi').replace(/\uFB04/g, 'ffl');
-  // Known SEQTA private-use ligature codepoints
-  for (const [code, letters] of Object.entries(KNOWN_PUA_LIGATURES)) {
+  // Built-in known SEQTA private-use ligature codepoints
+  for (const [code, letters] of Object.entries(BUILT_IN_PUA_LIGATURES)) {
+    out = out.split(code).join(letters);
+  }
+  // User-added PUA codepoint mappings (e.g. U+E007 → 'ck')
+  for (const [hex, letters] of Object.entries(userPuaLigatures)) {
+    const code = String.fromCharCode(parseInt(hex, 16));
+    if (!code) continue;
     out = out.split(code).join(letters);
   }
   // Any remaining private-use codepoints are unrecognised. Strip them but record what we
-  // saw so they can be diagnosed.
+  // saw so they can be diagnosed/added.
   out = out.replace(/[\uE000-\uF8FF]/g, ch => {
     unknownPUACodepoints.add(ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0'));
     return '';
   });
-  // Apply known-broken-word repairs (catches cases where the ligature codepoint went
-  // missing entirely during extraction).
-  for (const [pattern, replacement] of KNOWN_BROKEN_WORDS) {
-    out = out.replace(pattern, replacement);
+  // Apply broken-word repairs (built-in first, then user-defined). Patterns are simple
+  // case-sensitive whole-word matches: "Muen" → "Mutien".
+  const allBrokenWords = [...BUILT_IN_BROKEN_WORDS, ...userBrokenWords];
+  for (const [bad, good] of allBrokenWords) {
+    if (!bad || !good) continue;
+    // Word boundary, case sensitive (names are case-significant)
+    const re = new RegExp('\\b' + bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+    out = out.replace(re, good);
   }
   return out;
 }
@@ -1919,11 +2105,14 @@ async function parsePdf(file) {
   let summary = `Found ${allStudents.length} student${allStudents.length === 1 ? '' : 's'}.`;
   if (unknownPUACodepoints.size) {
     const codes = [...unknownPUACodepoints].sort().map(c => 'U+' + c).join(', ');
-    summary += `  ⚠ Unknown ligature codepoints in this PDF: ${codes}. Some names may be missing letters.`;
+    summary += `  ⚠ Unknown ligature codepoints (${codes}) — some names may be wrong. Upload the SEQTA CSV below to fix.`;
+    // Open the CSV-fix section so the affordance is visible
+    const csvSection = document.getElementById('csvFixSection');
+    if (csvSection) csvSection.open = true;
   }
   setStatus(summary);
-  // Reset for next import
-  unknownPUACodepoints.clear();
+  // Don't clear unknownPUACodepoints here — the Settings panel and the CSV-fix section
+  // both want to display these. They get cleared at the start of the next parse.
   return { students: allStudents, className: detectedClassName };
 }
 
@@ -2665,6 +2854,276 @@ $('#pdfDrop').addEventListener('drop', e => {
   if (e.dataTransfer.files && e.dataTransfer.files[0]) handlePdfFile(e.dataTransfer.files[0]);
 });
 
+// ─── CSV repair: match PDF students against canonical names from a SEQTA CSV ───
+//
+// SEQTA can export a class roll as CSV (tab-separated, sometimes comma). The export has
+// columns Code, Surname, First name, House, Roll group, Year, Email. When the PDF
+// extraction mangles a name (ligatures dropped, etc.), we use this canonical list to
+// fix it: match each PDF student to a CSV row by surname (+ first-name sanity check)
+// and replace with the canonical spelling.
+
+// Lightweight delimiter detection + parser. Handles tab, comma, and semicolon; supports
+// quoted fields. Returns an array of objects keyed by header.
+function parseDelimited(text) {
+  const lines = text.replace(/\r\n?/g, '\n').split('\n').filter(l => l.trim());
+  if (!lines.length) return { rows: [], delim: '\t' };
+  // Detect delimiter by counting in the first non-empty line
+  const counts = ['\t', ',', ';'].map(d => ({ d, n: (lines[0].split(d).length - 1) }));
+  counts.sort((a, b) => b.n - a.n);
+  const delim = counts[0].n > 0 ? counts[0].d : '\t';
+
+  // Strip BOM and any pre-header noise: SEQTA exports sometimes include a class-code
+  // line above the header, and the header itself can have leading whitespace/tab
+  // characters that become empty fields after splitting. Walk further than the
+  // default 5 lines to be safe.
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const lower = lines[i].toLowerCase();
+    if (lower.includes('surname') || lower.includes('first name') || lower.includes('firstname') || lower.includes('last name')) {
+      headerIdx = i;
+      break;
+    }
+  }
+  // Tiny CSV parser with quote handling
+  const parseRow = (raw) => {
+    const out = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (inQuote) {
+        if (ch === '"' && raw[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') inQuote = true;
+        else if (ch === delim) { out.push(cur); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    out.push(cur);
+    return out.map(s => s.trim().replace(/^\ufeff/, ''));
+  };
+
+  // Parse the header, then count leading-empty fields so we can align data rows.
+  // SEQTA CSVs sometimes pad the header line with leading tabs/spaces (creating empty
+  // leading fields). Data rows DON'T have these padding fields, so we'd otherwise end
+  // up with everything shifted by N columns.
+  const headerRaw = parseRow(lines[headerIdx]);
+  let firstFilled = 0;
+  while (firstFilled < headerRaw.length && !headerRaw[firstFilled]) firstFilled++;
+  const header = headerRaw.slice(firstFilled).map(s => s.toLowerCase());
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    let fields = parseRow(lines[i]);
+    if (!fields.some(f => f.length)) continue;
+    // If the data row ALSO has the same leading-empty padding (some exports do, some don't),
+    // strip it. Heuristic: trim leading empties only if the first non-empty cell aligns with
+    // the header's first column type (usually a Code like "STU0063335" or similar).
+    while (fields.length > header.length && !fields[0]) fields.shift();
+    const row = {};
+    header.forEach((h, idx) => { row[h] = fields[idx] || ''; });
+    rows.push(row);
+  }
+  return { rows, delim };
+}
+
+// Find the value of a row using flexible column-name matching.
+function rowGet(row, ...keys) {
+  for (const k of keys) {
+    const v = row[k.toLowerCase()];
+    if (v) return v;
+  }
+  return '';
+}
+
+// Normalise a name for matching: lower-case, strip PUA codepoints, strip non-letters,
+// collapse whitespace.
+function nameKey(s) {
+  if (!s) return '';
+  return String(s)
+    .toLowerCase()
+    .replace(/[\uE000-\uF8FF]/g, '')  // strip private-use chars
+    .replace(/[^a-z\u00c0-\u024f\s'\-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function handleCsvFixFile(file) {
+  if (!file) return;
+  if (!students.length) {
+    setCsvFixStatus('Import a PDF first, then upload the CSV to fix names.', true);
+    return;
+  }
+  setCsvFixStatus('Reading CSV…');
+  try {
+    const text = await file.text();
+    const { rows } = parseDelimited(text);
+    if (!rows.length) {
+      setCsvFixStatus('CSV looks empty. Check the file format.', true);
+      return;
+    }
+
+    // Build a list of canonical entries from the CSV. SEQTA's CSV puts any preferred
+    // name in parentheses inside the First name column itself (e.g. "Mzovuyo (Mzoe)").
+    // We extract the bracketed nickname and prefer it, matching the PDF behaviour.
+    const canonical = rows.map(r => {
+      const last = rowGet(r, 'Surname', 'Last name', 'Family name');
+      let first = rowGet(r, 'Preferred name', 'Preferred', 'First name', 'Firstname', 'Given name', 'Forename');
+      // Pull out a bracketed nickname if present
+      const nick = first.match(/\(([^)]+)\)/);
+      if (nick) {
+        first = nick[1].trim();
+      } else {
+        // No nickname — drop any middle names so we get just the first given name
+        first = first.replace(/\s*\([^)]*\)/g, '').trim().split(/\s+/)[0] || '';
+      }
+      const cleanLast = last.replace(/\s*\([^)]*\)/g, '').trim();
+      return { last: cleanLast, first, lastKey: nameKey(cleanLast), firstKey: nameKey(first) };
+    }).filter(c => c.last);
+
+    if (!canonical.length) {
+      setCsvFixStatus(`Couldn't find Surname / First name columns in the CSV. Headers seen: ${Object.keys(rows[0]).join(', ')}`, true);
+      return;
+    }
+
+    // Treat hyphens as word separators when comparing — handles cases where ligatures
+    // drop letters inside hyphenated surnames like "Mosbergen-Smith".
+    const tokens = (s) => s.replace(/-/g, ' ').split(' ').filter(Boolean);
+    // Levenshtein edit distance — handles insertions, deletions, AND substitutions. Needed
+    // because the same private-use codepoint in different PDFs can map to different
+    // ligatures: e.g. \uE000 was "ft" in one Year 10 PDF but "ti" in this Year 9 PDF, so
+    // "Matilda" can come out as "Maftlda" — two substitutions, not a deletion.
+    const editDistance = (a, b) => {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+      const m = a.length, n = b.length;
+      // Two-row dynamic programming
+      let prev = new Array(n + 1);
+      let curr = new Array(n + 1);
+      for (let j = 0; j <= n; j++) prev[j] = j;
+      for (let i = 1; i <= m; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(
+            prev[j] + 1,        // deletion
+            curr[j - 1] + 1,    // insertion
+            prev[j - 1] + cost  // substitution
+          );
+        }
+        [prev, curr] = [curr, prev];
+      }
+      return prev[n];
+    };
+    // True if two tokens "loosely match": one is a prefix of the other (with small length
+    // diff), OR their edit distance is small enough for their length. Tolerance scales:
+    //   length < 5  → allow 1 edit  (covers "Bel" vs "Bell")
+    //   length 5-9  → allow 2 edits (covers "Smih"→"Smith", "Maftlda"→"Matilda")
+    //   length ≥ 10 → allow 3 edits
+    const looseMatch = (a, b) => {
+      if (a === b) return true;
+      // Prefix match (one is a shorter version of the other)
+      if (a.startsWith(b) || b.startsWith(a)) return Math.abs(a.length - b.length) <= 3;
+      const maxLen = Math.max(a.length, b.length);
+      const allowed = maxLen < 5 ? 1 : maxLen < 10 ? 2 : 3;
+      // Quick reject: if length differs by more than the allowed edit distance, no point computing
+      if (Math.abs(a.length - b.length) > allowed) return false;
+      return editDistance(a, b) <= allowed;
+    };
+    const fuzzyTokenMatch = (sTokens, cTokens) => {
+      if (sTokens.length !== cTokens.length) return false;
+      return sTokens.every((st, i) => looseMatch(st, cTokens[i]));
+    };
+
+    // Match each existing student to a canonical entry.
+    let matched = 0;
+    let changed = 0;
+    let unmatched = [];
+    for (const s of students) {
+      const sLastKey = nameKey(s.last);
+      const sFirstKey = nameKey(s.first);
+      const sLastTokens = tokens(sLastKey);
+      // 1) Exact surname match
+      let candidates = canonical.filter(c => c.lastKey === sLastKey);
+      // 2) Fuzzy token-by-token surname match (handles missing letters in any token)
+      if (!candidates.length) {
+        candidates = canonical.filter(c => fuzzyTokenMatch(sLastTokens, tokens(c.lastKey)));
+      }
+      // 3) If multiple candidates, narrow by first name
+      if (candidates.length > 1 && sFirstKey) {
+        const narrowed = candidates.filter(c =>
+          looseMatch(sFirstKey, c.firstKey) ||
+          tokens(c.firstKey).some(t => looseMatch(sFirstKey, t)) ||
+          tokens(sFirstKey).some(t => looseMatch(t, c.firstKey))
+        );
+        if (narrowed.length) candidates = narrowed;
+      }
+
+      if (candidates.length === 1) {
+        matched++;
+        const c = candidates[0];
+        const oldFirst = s.first, oldLast = s.last;
+        s.last = c.last;
+        // Decide whether the PDF first name is a genuine nickname worth preserving,
+        // versus a broken extraction we should overwrite.
+        //
+        // Nickname (preserve): "Gab" for "Gabriel", "Mzoe" for "Mzovuyo". The PDF name
+        // is meaningfully different from the canonical — not just a missing letter.
+        //
+        // Broken extraction (overwrite): "Dane" for "Danie", "Muen" for "Mutien". The PDF
+        // name is the canonical name with a letter or two dropped.
+        //
+        // Heuristic: if looseMatch(pdf, canonical) is true (differs by ≤ 1 inserted char or
+        // is a prefix), it's a broken extraction — use the canonical. Otherwise, preserve
+        // the PDF name as a likely nickname.
+        const isBrokenExtraction = looseMatch(sFirstKey, c.firstKey);
+        if (isBrokenExtraction || !sFirstKey) {
+          s.first = c.first;
+        }
+        // else: keep s.first (likely nickname)
+        if (oldFirst !== s.first || oldLast !== s.last) changed++;
+      } else {
+        unmatched.push(`${s.first} ${s.last}`);
+      }
+    }
+
+    render();
+    $('#pasteArea').value = studentsAsPasteText();
+    let msg = `Matched ${matched} of ${students.length} students. ${changed} name${changed === 1 ? '' : 's'} updated.`;
+    if (unmatched.length) {
+      msg += ` Unmatched: ${unmatched.slice(0, 5).join(', ')}${unmatched.length > 5 ? ', …' : ''}.`;
+    }
+    setCsvFixStatus(msg, unmatched.length > 0);
+    if (changed > 0) toast(`Fixed ${changed} name${changed === 1 ? '' : 's'} from CSV`);
+    else if (matched === students.length) toast('All names already match the CSV');
+  } catch (err) {
+    console.error(err);
+    setCsvFixStatus('Failed to read CSV: ' + err.message, true);
+  }
+}
+
+function setCsvFixStatus(msg, isError) {
+  const el = $('#csvFixStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? 'var(--accent)' : 'var(--ink-soft)';
+}
+
+$('#csvFixInput').addEventListener('click', e => { e.target.value = ''; });
+$('#csvFixInput').addEventListener('change', e => handleCsvFixFile(e.target.files[0]));
+['dragenter','dragover'].forEach(ev =>
+  $('#csvFixDrop').addEventListener(ev, e => { e.preventDefault(); $('#csvFixDrop').classList.add('drag'); })
+);
+['dragleave','drop'].forEach(ev =>
+  $('#csvFixDrop').addEventListener(ev, e => { e.preventDefault(); $('#csvFixDrop').classList.remove('drag'); })
+);
+$('#csvFixDrop').addEventListener('drop', e => {
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) handleCsvFixFile(e.dataTransfer.files[0]);
+});
+
 $('#generateBtn').addEventListener('click', () => generate(true));
 $('#shuffleBtn').addEventListener('click', () => {
   if (!students.length) { toast('No students yet'); return; }
@@ -2792,6 +3251,7 @@ const constraintsModal = $('#constraintsModal');
 
 function openConstraints() {
   renderConstraintsPanel();
+  renderLigaturePanel();
   constraintsModal.classList.add('show');
 }
 function closeConstraints() {
@@ -2975,6 +3435,98 @@ function renderConstraintsPanel() {
   // edits the rules.
   if (typeof render === 'function' && students.length) render();
 }
+
+// ─── Ligature repairs UI ─────────────────────
+function renderLigaturePanel() {
+  const list = $('#ligatureList');
+  list.innerHTML = '';
+
+  // Show built-in rules first (read-only), then user rules (removable).
+  const allRules = [
+    ...BUILT_IN_BROKEN_WORDS.map(([bad, good]) => ({ bad, good, builtIn: true })),
+    ...userBrokenWords.map(([bad, good], idx) => ({ bad, good, builtIn: false, idx })),
+  ];
+
+  if (!allRules.length) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:14px;text-align:center;color:var(--ink-soft);font-size:13px;border:1px dashed var(--rule);border-radius:3px;';
+    empty.textContent = 'No repairs yet.';
+    list.appendChild(empty);
+  }
+
+  for (const rule of allRules) {
+    const row = document.createElement('div');
+    row.className = 'ligature-row';
+    row.innerHTML = `
+      <span class="bad">${escapeHtml(rule.bad)}</span>
+      <span class="arrow">→</span>
+      <span class="good">${escapeHtml(rule.good)}</span>
+      <span class="source-tag">${rule.builtIn ? 'built-in' : 'yours'}</span>
+    `;
+    if (!rule.builtIn) {
+      const rm = document.createElement('button');
+      rm.className = 'remove-btn';
+      rm.textContent = '× remove';
+      rm.title = 'Remove this repair';
+      rm.addEventListener('click', () => {
+        userBrokenWords.splice(rule.idx, 1);
+        saveUserLigatureRules();
+        renderLigaturePanel();
+      });
+      row.appendChild(rm);
+    }
+    list.appendChild(row);
+  }
+
+  // Diagnostic: any unknown PUA codepoints that appeared in the last import
+  const diag = $('#ligatureDiagnostic');
+  if (unknownPUACodepoints.size) {
+    const codes = [...unknownPUACodepoints].sort().map(c => 'U+' + c).join(', ');
+    diag.innerHTML = `⚠ Last import had unknown ligature codepoints: <code>${codes}</code>. If a name looks wrong, add a repair above.`;
+    diag.style.color = 'var(--accent)';
+  } else {
+    diag.textContent = '';
+  }
+}
+
+function addLigatureRepair(bad, good) {
+  bad = (bad || '').trim();
+  good = (good || '').trim();
+  if (!bad || !good) {
+    toast('Enter both the broken and correct spellings');
+    return false;
+  }
+  if (bad === good) {
+    toast('Broken and correct are the same');
+    return false;
+  }
+  // Replace any existing rule for the same bad spelling
+  const existingIdx = userBrokenWords.findIndex(([b]) => b === bad);
+  if (existingIdx >= 0) userBrokenWords.splice(existingIdx, 1);
+  userBrokenWords.push([bad, good]);
+  saveUserLigatureRules();
+  renderLigaturePanel();
+  return true;
+}
+
+$('#ligAddBtn').addEventListener('click', () => {
+  const bad = $('#ligBadInput').value;
+  const good = $('#ligGoodInput').value;
+  if (addLigatureRepair(bad, good)) {
+    $('#ligBadInput').value = '';
+    $('#ligGoodInput').value = '';
+    $('#ligBadInput').focus();
+  }
+});
+// Allow Enter in either input to add
+['#ligBadInput', '#ligGoodInput'].forEach(sel => {
+  $(sel).addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      $('#ligAddBtn').click();
+    }
+  });
+});
 
 $('#addGroupBtn').addEventListener('click', () => {
   separationGroups.push([]);
