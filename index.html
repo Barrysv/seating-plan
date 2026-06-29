@@ -1549,8 +1549,14 @@ const BUILT_IN_PUA_LIGATURES = {
 };
 // Default broken-word repairs (catches cases where the ligature codepoint went missing
 // entirely during PDF extraction). Users can extend this list via Settings → Ligature repairs.
+//
+// Note on Muften: the private-use codepoint \uE000 represents different ligatures in
+// different PDF exports — sometimes 'ft', sometimes 'ti'. Our default mapping is 'ft'
+// (from the Year 10 Science PDF), so when this codepoint actually represents 'ti'
+// (e.g. in Year 9 PDFs), "Mutien" comes out as "Muften". Repair that here.
 const BUILT_IN_BROKEN_WORDS = [
   ['Muen', 'Mutien'],
+  ['Muften', 'Mutien'],
 ];
 
 // User-editable additions (persisted in localStorage). Loaded once at startup; saved
