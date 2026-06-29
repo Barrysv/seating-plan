@@ -350,38 +350,113 @@
   .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .row .btn { flex: 1; min-width: 0; }
 
-  /* ─── Optional CSV-fix section ─────────────── */
-  .csv-fix-section {
-    margin-top: 14px;
+  /* ─── Source sections (Photos / Names) ─────── */
+  .source-section {
+    margin-top: 18px;
+    padding-top: 16px;
     border-top: 1px dashed var(--rule);
-    padding-top: 14px;
   }
-  .csv-fix-section summary {
+  .source-section:first-of-type {
+    margin-top: 14px;
+  }
+  .source-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .source-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+    flex: 0 0 auto;
+  }
+  .source-status {
+    flex: 1;
+    font-family: "Fraunces", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: right;
+    line-height: 1.3;
+  }
+  .source-status.loaded {
+    color: var(--teal);
+    font-style: normal;
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .source-clear {
+    flex: 0 0 auto;
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    transition: all .12s ease;
+  }
+  .source-clear:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .source-help {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 0 0 12px;
+  }
+  .source-help code {
+    font-family: "JetBrains Mono", monospace;
+    background: var(--paper-deep);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 11.5px;
+  }
+  /* When a source is loaded, collapse the body so the loaded state is the focus */
+  .source-section.is-loaded .source-body {
+    display: none;
+  }
+
+  /* Compact variant of the SEQTA workflow instructions for inside the source section */
+  .seqta-instructions--compact {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .seqta-instructions--compact .seqta-step {
+    font-size: 12px;
+    padding: 2px 0;
+  }
+
+  /* Paste fallback inside the Names section */
+  .paste-fallback {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+  }
+  .paste-fallback summary {
     cursor: pointer;
     font-family: "JetBrains Mono", monospace;
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.15em;
     color: var(--ink-soft);
     list-style: none;
     padding: 4px 0;
     user-select: none;
   }
-  .csv-fix-section summary::-webkit-details-marker { display: none; }
-  .csv-fix-section summary:hover { color: var(--ink); }
-  .csv-fix-section .csv-fix-hint {
-    color: var(--accent);
-    font-weight: 500;
-  }
-  .csv-fix-section[open] summary { color: var(--ink); margin-bottom: 8px; }
-  .csv-fix-body { padding-left: 2px; }
-  .file-drop--small {
-    padding: 18px 14px;
-    border-style: dashed;
-    border-width: 1px;
-  }
-  .file-drop--small p { font-size: 12px; }
-  .file-drop--small p strong { font-size: 13px; }
+  .paste-fallback summary::-webkit-details-marker { display: none; }
+  .paste-fallback summary:hover { color: var(--ink); }
+  .paste-fallback[open] summary { color: var(--ink); margin-bottom: 6px; }
+  .paste-fallback-body { padding-top: 4px; }
 
   .meta {
     margin-top: 18px;
@@ -1263,63 +1338,63 @@
 
     <!-- Sidebar -->
     <aside class="panel">
-      <h2>Class List</h2>
-      <p class="hint">Import a CSV (<code>surname, firstname</code>) or paste names directly.</p>
+      <h2>Class data</h2>
+      <p class="hint">Load student photos and names from SEQTA. Both are optional, but loading both gives the best result &mdash; photos from the PDF, canonical name spellings from the CSV.</p>
 
-      <div class="tabs">
-        <button class="tab active" data-tab="pdf">PDF + Photos</button>
-        <button class="tab" data-tab="paste">Paste</button>
-        <button class="tab" data-tab="file">CSV</button>
-      </div>
-
-      <div class="tab-panel" id="tab-paste" style="display:none;">
-        <textarea id="pasteArea" placeholder="Smith, Olivia&#10;Nguyen, Liam&#10;Watson, Aria&#10;...&#10;&#10;Or just one name per line:&#10;Olivia Smith&#10;Liam Nguyen"></textarea>
-      </div>
-
-      <div class="tab-panel" id="tab-file" style="display:none;">
-        <label class="file-drop" id="fileDrop">
-          <span class="icon">↓</span>
-          <p><strong>Click or drop a .csv file</strong></p>
-          <p style="font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;">surname, firstname</p>
-          <input type="file" id="fileInput" accept=".csv,text/csv,text/plain" style="display:none;">
-        </label>
-      </div>
-
-      <div class="tab-panel" id="tab-pdf">
-        <div class="seqta-instructions">
-          <div class="seqta-step"><span class="num">1</span> In SEQTA, open the class roll</div>
-          <div class="seqta-step"><span class="num">2</span> Choose <strong>Print</strong> → <strong>Student photos</strong></div>
-          <div class="seqta-step"><span class="num">3</span> Save as PDF, then drop it below</div>
+      <!-- ─── Section 1: Photos (PDF) ─── -->
+      <div class="source-section">
+        <div class="source-head">
+          <div class="source-label">Photos</div>
+          <div class="source-status" id="pdfSourceStatus">Not loaded</div>
+          <button type="button" class="source-clear" id="pdfClearBtn" style="display:none;" title="Remove the loaded PDF">&times;</button>
         </div>
-        <label class="file-drop" id="pdfDrop">
-          <span class="icon">⬚</span>
-          <p><strong>Click or drop the SEQTA PDF</strong></p>
-          <p style="font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;">imports class title, names &amp; photos</p>
-          <input type="file" id="pdfInput" accept=".pdf,application/pdf" style="display:none;">
-        </label>
-        <p id="pdfStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
-
-        <!-- Optional CSV: fixes any names broken by PDF ligature extraction -->
-        <details class="csv-fix-section" id="csvFixSection">
-          <summary>Names look wrong? <span class="csv-fix-hint">Fix from SEQTA CSV →</span></summary>
-          <div class="csv-fix-body">
-            <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 10px;line-height:1.5;">
-              Export the class roll as CSV from SEQTA and drop it here. The tool will match
-              students by surname and replace any incorrectly-extracted names with the
-              canonical spellings.
-            </p>
-            <label class="file-drop file-drop--small" id="csvFixDrop">
-              <p><strong>Click or drop the SEQTA CSV</strong></p>
-              <p style="font-size:10px;margin-top:3px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);">tab or comma separated</p>
-              <input type="file" id="csvFixInput" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" style="display:none;">
-            </label>
-            <p id="csvFixStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
+        <div class="source-body" id="pdfSourceBody">
+          <div class="seqta-instructions seqta-instructions--compact">
+            <div class="seqta-step"><span class="num">1</span> In SEQTA, open the class roll</div>
+            <div class="seqta-step"><span class="num">2</span> Choose <strong>Print</strong> → <strong>Student photos</strong></div>
+            <div class="seqta-step"><span class="num">3</span> Save as PDF, then drop it below</div>
           </div>
-        </details>
+          <label class="file-drop" id="pdfDrop">
+            <span class="icon">⬚</span>
+            <p><strong>Click or drop the SEQTA PDF</strong></p>
+            <p style="font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;">photos, class title &amp; names</p>
+            <input type="file" id="pdfInput" accept=".pdf,application/pdf" style="display:none;">
+          </label>
+          <p id="pdfStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
+        </div>
+      </div>
+
+      <!-- ─── Section 2: Names (CSV / Paste) ─── -->
+      <div class="source-section">
+        <div class="source-head">
+          <div class="source-label">Names</div>
+          <div class="source-status" id="namesSourceStatus">Not loaded</div>
+          <button type="button" class="source-clear" id="namesClearBtn" style="display:none;" title="Remove loaded names">&times;</button>
+        </div>
+        <div class="source-body" id="namesSourceBody">
+          <p class="source-help">
+            Drop the SEQTA CSV for canonical name spellings. If you've already loaded a PDF, this corrects any names broken by ligature extraction issues.
+          </p>
+          <label class="file-drop" id="csvFixDrop">
+            <span class="icon">↓</span>
+            <p><strong>Click or drop the SEQTA CSV</strong></p>
+            <p style="font-size:11px;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.08em;text-transform:uppercase;">tab or comma separated</p>
+            <input type="file" id="csvFixInput" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" style="display:none;">
+          </label>
+          <p id="csvFixStatus" style="font-size:12px;color:var(--ink-soft);margin:10px 0 0;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;"></p>
+          <details class="paste-fallback">
+            <summary>Or paste a list of names manually</summary>
+            <div class="paste-fallback-body">
+              <p class="source-help">One per line, in <code>Surname, Firstname</code> format. Useful when you don't have SEQTA access.</p>
+              <textarea id="pasteArea" placeholder="Smith, Olivia&#10;Nguyen, Liam&#10;Watson, Aria"></textarea>
+              <button type="button" class="btn ghost" id="pasteApplyBtn" style="margin-top:8px;">Use pasted names</button>
+            </div>
+          </details>
+        </div>
       </div>
 
       <div class="row">
-        <button class="btn primary" id="generateBtn">Generate Grid</button>
+        <button class="btn primary" id="generateBtn">Generate grid</button>
       </div>
 
       <div class="options">
@@ -2111,10 +2186,7 @@ async function parsePdf(file) {
   let summary = `Found ${allStudents.length} student${allStudents.length === 1 ? '' : 's'}.`;
   if (unknownPUACodepoints.size) {
     const codes = [...unknownPUACodepoints].sort().map(c => 'U+' + c).join(', ');
-    summary += `  ⚠ Unknown ligature codepoints (${codes}) — some names may be wrong. Upload the SEQTA CSV below to fix.`;
-    // Open the CSV-fix section so the affordance is visible
-    const csvSection = document.getElementById('csvFixSection');
-    if (csvSection) csvSection.open = true;
+    summary += `  ⚠ Unknown ligature codepoints (${codes}) — some names may be wrong. Drop the SEQTA CSV in the Names section to fix.`;
   }
   setStatus(summary);
   // Don't clear unknownPUACodepoints here — the Settings panel and the CSV-fix section
@@ -2455,6 +2527,17 @@ function loadLayout() {
         }
         // repopulate paste area for convenience (always alphabetical by surname)
         $('#pasteArea').value = studentsAsPasteText();
+        // Mark source state — we don't know exactly where it came from originally, but
+        // we know we have students with possibly-photos.
+        const hasPhotos = students.some(s => s.photo);
+        photosSource = hasPhotos ? 'pdf' : null;
+        namesSource = 'loaded';
+        if (hasPhotos) setPhotosState(true, `${students.filter(s => s.photo).length} photos`);
+        else setPhotosState(false);
+        const namesStatus = $('#namesSourceStatus');
+        namesStatus.textContent = `${students.length} from saved file`;
+        namesStatus.classList.add('loaded');
+        $('#namesClearBtn').style.display = '';
         render();
         toast('Layout loaded');
       } catch (err) {
@@ -2788,33 +2871,96 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
-/* ───────────── Tabs ───────────── */
-function switchTab(name) {
-  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  // Show/hide every tab panel by matching its id (tab-paste, tab-file, tab-pdf, …)
-  $$('.tab-panel').forEach(p => {
-    p.style.display = p.id === `tab-${name}` ? 'block' : 'none';
-  });
+/* ───────────── Source section state ─────────────
+   Each source (Photos from PDF, Names from CSV/Paste) has a header showing whether
+   it's loaded, plus an ✕ to clear just that section. When loaded, the body collapses
+   so the loaded state becomes the focus. */
+function setPhotosState(loaded, label) {
+  const section = $('#pdfSourceBody').closest('.source-section');
+  const status = $('#pdfSourceStatus');
+  const clearBtn = $('#pdfClearBtn');
+  if (loaded) {
+    section.classList.add('is-loaded');
+    status.textContent = '✓ ' + label;
+    status.classList.add('loaded');
+    clearBtn.style.display = '';
+  } else {
+    section.classList.remove('is-loaded');
+    status.textContent = 'Not loaded';
+    status.classList.remove('loaded');
+    clearBtn.style.display = 'none';
+  }
 }
+function setNamesState(loaded, label) {
+  const section = $('#namesSourceBody').closest('.source-section');
+  const status = $('#namesSourceStatus');
+  const clearBtn = $('#namesClearBtn');
+  if (loaded) {
+    section.classList.add('is-loaded');
+    status.textContent = '✓ ' + label;
+    status.classList.add('loaded');
+    clearBtn.style.display = '';
+  } else {
+    section.classList.remove('is-loaded');
+    status.textContent = 'Not loaded';
+    status.classList.remove('loaded');
+    clearBtn.style.display = 'none';
+  }
+}
+// Track what's loaded so we can show meaningful status text
+let photosSource = null;   // null | 'pdf'
+let namesSource = null;    // null | 'pdf' | 'csv' | 'paste'
 
-/* ───────────── Wire up ───────────── */
-$$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+$('#pdfClearBtn').addEventListener('click', () => {
+  // Clear photos AND any names that came from the PDF (since they're inseparable)
+  students = students.map(s => ({ ...s, photo: undefined }));
+  if (namesSource === 'pdf') {
+    students = [];
+    layout = [];
+    namesSource = null;
+    setNamesState(false);
+  }
+  photosSource = null;
+  setPhotosState(false);
+  $('#pdfStatus').textContent = '';
+  render();
+  toast('Photos cleared');
+});
 
-// Native label-click opens the file picker. We DON'T need to call .click() ourselves
-// (that would open the picker twice and cause the first click to appear to do nothing).
-// We just need to reset the input value so re-selecting the same file still fires
-// 'change'. We do that on the input's own click event, which fires just before the
-// picker opens.
-$('#fileInput').addEventListener('click', e => { e.target.value = ''; });
-$('#fileInput').addEventListener('change', e => handleFile(e.target.files[0]));
-['dragenter','dragover'].forEach(ev =>
-  $('#fileDrop').addEventListener(ev, e => { e.preventDefault(); $('#fileDrop').classList.add('drag'); })
-);
-['dragleave','drop'].forEach(ev =>
-  $('#fileDrop').addEventListener(ev, e => { e.preventDefault(); $('#fileDrop').classList.remove('drag'); })
-);
-$('#fileDrop').addEventListener('drop', e => {
-  if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+$('#namesClearBtn').addEventListener('click', () => {
+  students = [];
+  layout = [];
+  namesSource = null;
+  photosSource = null;  // photos are tied to students; clearing names clears photos too
+  setNamesState(false);
+  setPhotosState(false);
+  $('#pdfStatus').textContent = '';
+  $('#csvFixStatus').textContent = '';
+  $('#pasteArea').value = '';
+  $('#classNameDisplay').value = 'Untitled class';
+  render();
+  toast('Names cleared');
+});
+
+// Manual paste fallback: apply when the user clicks "Use pasted names"
+$('#pasteApplyBtn').addEventListener('click', () => {
+  const text = $('#pasteArea').value.trim();
+  if (!text) {
+    toast('Type or paste some names first');
+    return;
+  }
+  if (photosSource) {
+    if (!confirm('Replace the names from the loaded PDF with the pasted list?\n\nThis will also remove the photos.')) return;
+    photosSource = null;
+    setPhotosState(false);
+    $('#pdfStatus').textContent = '';
+  }
+  students = parseInput(text);
+  layout = constrainedShuffle(students.map(s => s.id));
+  namesSource = 'paste';
+  setNamesState(true, `${students.length} names from paste`);
+  render();
+  toast(`Loaded ${students.length} names`);
 });
 
 // PDF
@@ -2838,6 +2984,18 @@ async function handlePdfFile(file) {
     if (detectedName) {
       $('#classNameDisplay').value = detectedName;
     }
+    // Mark the source sections
+    photosSource = 'pdf';
+    namesSource = 'pdf';
+    const photoCount = students.filter(s => s.photo).length;
+    setPhotosState(true, `${photoCount} photos`);
+    // Names came from the PDF but they may have ligature artifacts — keep the Names
+    // section's body visible so the user can drop the CSV to refine.
+    const namesStatus = $('#namesSourceStatus');
+    namesStatus.textContent = `${students.length} from PDF · refine ↓`;
+    namesStatus.classList.add('loaded');
+    $('#namesClearBtn').style.display = '';
+    // (Don't add is-loaded class — body stays open)
     render();
     toast(`Loaded ${students.length} students from PDF`);
   } catch (err) {
@@ -2958,10 +3116,6 @@ function nameKey(s) {
 
 async function handleCsvFixFile(file) {
   if (!file) return;
-  if (!students.length) {
-    setCsvFixStatus('Import a PDF first, then upload the CSV to fix names.', true);
-    return;
-  }
   setCsvFixStatus('Reading CSV…');
   try {
     const text = await file.text();
@@ -2991,6 +3145,23 @@ async function handleCsvFixFile(file) {
 
     if (!canonical.length) {
       setCsvFixStatus(`Couldn't find Surname / First name columns in the CSV. Headers seen: ${Object.keys(rows[0]).join(', ')}`, true);
+      return;
+    }
+
+    // Branch: if no students yet, build them straight from the CSV. Otherwise we're
+    // refining existing students (typically PDF-extracted ones with ligature artifacts).
+    if (!students.length) {
+      students = canonical.map(c => ({ id: uid(), first: c.first, last: c.last }));
+      layout = constrainedShuffle(students.map(s => s.id));
+      $('#pasteArea').value = studentsAsPasteText();
+      namesSource = 'csv';
+      const namesStatus = $('#namesSourceStatus');
+      namesStatus.textContent = `${students.length} from CSV (canonical)`;
+      namesStatus.classList.add('loaded');
+      $('#namesClearBtn').style.display = '';
+      setCsvFixStatus(`Loaded ${students.length} students from CSV.`);
+      render();
+      toast(`Loaded ${students.length} students from CSV`);
       return;
     }
 
@@ -3105,6 +3276,12 @@ async function handleCsvFixFile(file) {
     setCsvFixStatus(msg, unmatched.length > 0);
     if (changed > 0) toast(`Fixed ${changed} name${changed === 1 ? '' : 's'} from CSV`);
     else if (matched === students.length) toast('All names already match the CSV');
+    // Names are now canonical from the CSV
+    namesSource = 'csv';
+    const namesStatus = $('#namesSourceStatus');
+    namesStatus.textContent = `${students.length} from CSV (canonical)`;
+    namesStatus.classList.add('loaded');
+    $('#namesClearBtn').style.display = '';
   } catch (err) {
     console.error(err);
     setCsvFixStatus('Failed to read CSV: ' + err.message, true);
@@ -3205,11 +3382,17 @@ $('#clearBtn').addEventListener('click', () => {
   aisles = [];
   roomRef = '';
   sortDirection = 0;
+  photosSource = null;
+  namesSource = null;
+  setPhotosState(false);
+  setNamesState(false);
   $('#pasteArea').value = '';
   $('#aislesInputSidebar').value = '';
   $('#roomRefInputSidebar').value = '';
   $('#roomBadge').style.display = 'none';
   $('#classNameDisplay').value = 'Untitled class';
+  $('#pdfStatus').textContent = '';
+  $('#csvFixStatus').textContent = '';
   updateSortButtonLabel();
   setViewMode('teacher');
   toast('Cleared');
